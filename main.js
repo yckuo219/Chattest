@@ -1,34 +1,73 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Chat Application</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        .chat-box { width: 300px; margin: 20px auto; }
-        .message { border-bottom: 1px solid #ccc; padding: 5px 0; }
-        .login-box, .logout-box, .chat-input-box { display: none; }
-    </style>
-</head>
-<body>
-    <div class="chat-box">
-        <h1>Chat Application</h1>
-        <div class="login-box">
-            <button id="loginBtn">Login with Google</button>
-        </div>
-        <div class="logout-box">
-            <p>Welcome, <span id="userName"></span>!</p>
-            <button id="logoutBtn">Logout</button>
-        </div>
-        <div id="messages"></div>
-        <div class="chat-input-box">
-            <input type="text" id="messageInput" placeholder="Type a message">
-            <button id="sendBtn">Send</button>
-        </div>
-    </div>
+import { auth, database } from './config.js';
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { ref, push, onChildAdded } from 'firebase/database';
 
-    <!-- Firebase JS SDK -->
-    <script type="module" src="config.js"></script>
-    <script type="module" src="main.js"></script>
-</body>
-</html>
+const loginBox = document.querySelector('.login-box');
+const logoutBox = document.querySelector('.logout-box');
+const chatInputBox = document.querySelector('.chat-input-box');
+const userName = document.getElementById('userName');
+const messagesDiv = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+
+// Login function
+loginBtn.addEventListener('click', () => {
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider);
+});
+
+// Logout function
+logoutBtn.addEventListener('click', () => {
+    signOut(auth);
+});
+
+// Auth state observer
+onAuthStateChanged(auth, user => {
+    if (user) {
+        loginBox.style.display = 'none';
+        logoutBox.style.display = 'block';
+        chatInputBox.style.display = 'block';
+        userName.textContent = user.displayName;
+        loadMessages();
+    } else {
+        loginBox.style.display = 'block';
+        logoutBox.style.display = 'none';
+        chatInputBox.style.display = 'none';
+        messagesDiv.innerHTML = '';
+    }
+});
+
+// Load messages from Firebase
+function loadMessages() {
+    const messagesRef = ref(database, 'messages/');
+    onChildAdded(messagesRef, (snapshot) => {
+        const message = snapshot.val();
+        displayMessage(message);
+    });
+}
+
+// Display message in the chat box
+function displayMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    messageElement.textContent = `${message.user}: ${message.text}`;
+    messagesDiv.appendChild(messageElement);
+}
+
+// Send message
+sendBtn.addEventListener('click', () => {
+    const message = messageInput.value;
+    const user = auth.currentUser;
+    if (message && user) {
+        const messageObj = {
+            text: message,
+            user: user.displayName,
+            timestamp: Date.now()
+        };
+        const messagesRef = ref(database, 'messages/');
+        push(messagesRef, messageObj);
+        messageInput.value = '';
+    }
+});
