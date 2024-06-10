@@ -1,132 +1,74 @@
-// Authentication elements
-const loginBtn = document.getElementById('loginBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const userName = document.getElementById('userName');
+// Firebase 初始化
+firebase.initializeApp(firebaseConfig);
+
+// 获取 DOM 元素
 const loginBox = document.querySelector('.login-box');
 const logoutBox = document.querySelector('.logout-box');
-const chatInputBox = document.querySelector('.chat-input-box');
+const userName = document.getElementById('userName');
+const messagesContainer = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
 
-// Firebase Auth and Database references
-const auth = firebase.auth();
-const database = firebase.database();
-const messagesRef = database.ref('messages');
-
-// Sign in with Google
-loginBtn.addEventListener('click', () => {
+// 监听登录按钮点击事件
+loginBtn.addEventListener('click', async () => {
+  try {
+    // 使用 Google 身份验证提供程序进行登录
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider);
+    await firebase.auth().signInWithPopup(provider);
+  } catch (error) {
+    console.error(error.message);
+  }
 });
 
-// Handle the redirect result
-auth.getRedirectResult().then((result) => {
-    if (result.user) {
-        console.log("Logged in via redirect:", result.user);
+// 监听登出按钮点击事件
+logoutBtn.addEventListener('click', async () => {
+  try {
+    // 登出用户
+    await firebase.auth().signOut();
+  } catch (error) {
+    console.error(error.message);
+  }
+});
+
+// 监听发送按钮点击事件
+sendBtn.addEventListener('click', async () => {
+  const message = messageInput.value.trim();
+  if (message !== '') {
+    try {
+      // 向数据库中添加消息
+      await firebase.database().ref('messages').push({
+        text: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+      // 清空输入框
+      messageInput.value = '';
+    } catch (error) {
+      console.error(error.message);
     }
-}).catch((error) => {
-    console.error("Error during sign in with redirect:", error);
+  }
 });
 
-// Sign out
-logoutBtn.addEventListener('click', () => {
-    auth.signOut();
+// 监听认证状态变化事件
+firebase.auth().onAuthStateChanged((user) => {
+  if (user) {
+    // 用户已登录
+    loginBox.style.display = 'none';
+    logoutBox.style.display = 'block';
+    userName.textContent = user.displayName;
+  } else {
+    // 用户未登录
+    loginBox.style.display = 'block';
+    logoutBox.style.display = 'none';
+    userName.textContent = '';
+  }
 });
 
-// Auth state changes
-auth.onAuthStateChanged(user => {
-    if (user) {
-        loginBox.style.display = 'none';
-        logoutBox.style.display = 'block';
-        chatInputBox.style.display = 'block';
-        userName.textContent = user.displayName;
-        loadMessages();
-    } else {
-        loginBox.style.display = 'block';
-        logoutBox.style.display = 'none';
-        chatInputBox.style.display = 'none';
-        userName.textContent = '';
-    }
+// 添加数据库监听器，实时接收新消息
+firebase.database().ref('messages').on('child_added', (snapshot) => {
+  const message = snapshot.val();
+  const messageElement = document.createElement('div');
+  messageElement.textContent = `${message.text} (from ${message.sender})`;
+  messagesContainer.appendChild(messageElement);
 });
-
-// Send message
-document.getElementById('sendBtn').addEventListener('click', () => {
-    const message = document.getElementById('messageInput').value;
-    if (message) {
-        const timestamp = new Date().toLocaleString();
-        const userId = auth.currentUser.uid;
-        messagesRef.push({
-            user: auth.currentUser.displayName,
-            userId: userId,
-            message: message,
-            timestamp: timestamp
-        });
-        document.getElementById('messageInput').value = '';
-    }
-});
-
-// Display messages with delete button
-messagesRef.on('child_added', (snapshot) => {
-    const messageData = snapshot.val();
-    const messageElement = document.createElement('div');
-    messageElement.classList.add('message');
-    messageElement.textContent = `${messageData.user} (${messageData.timestamp}): ${messageData.message}`;
-    
-    // 如果消息发送者是当前用户，添加删除按钮
-    if (messageData.userId === auth.currentUser.uid) {
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Delete';
-        deleteButton.addEventListener('click', () => {
-            deleteMessage(snapshot.key);
-        });
-        messageElement.appendChild(deleteButton);
-    }
-    
-    document.getElementById('messages').appendChild(messageElement);
-});
-
-// Delete message function
-function deleteMessage(messageId) {
-    messagesRef.child(messageId).once('value', (snapshot) => {
-        const messageData = snapshot.val();
-        if (messageData.userId === auth.currentUser.uid) {
-            messagesRef.child(messageId).remove()
-                .then(() => {
-                    console.log('Message deleted successfully');
-                    // Reload messages
-                    loadMessages();
-                })
-                .catch((error) => {
-                    console.error('Error deleting message:', error);
-                });
-        } else {
-            console.error('You can only delete your own messages');
-        }
-    });
-}
-
-// Load messages
-function loadMessages() {
-    document.getElementById('messages').innerHTML = ''; // Clear messages
-    messagesRef.once('value', (snapshot) => {
-        snapshot.forEach((childSnapshot) => {
-            const messageData = childSnapshot.val();
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('message');
-            messageElement.textContent = `${messageData.user} (${messageData.timestamp}): ${messageData.message}`;
-            
-            // 如果消息发送者是当前用户，添加删除按钮
-            if (messageData.userId === auth.currentUser.uid) {
-                const deleteButton = document.createElement('button');
-                deleteButton.textContent = 'Delete';
-                deleteButton.addEventListener('click', () => {
-                    deleteMessage(childSnapshot.key);
-                });
-                messageElement.appendChild(deleteButton);
-            }
-            
-            document.getElementById('messages').appendChild(messageElement);
-        });
-    });
-}
-
-// Initial load messages
-loadMessages();
