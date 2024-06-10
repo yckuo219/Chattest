@@ -14,8 +14,18 @@ const messagesRef = database.ref('messages');
 // Sign in with Google
 loginBtn.addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider);
+    auth.signInWithRedirect(provider);
 });
+
+// Handle the redirect result
+auth.getRedirectResult().then((result) => {
+    if (result.user) {
+        console.log("Logged in via redirect:", result.user);
+    }
+}).catch((error) => {
+    console.error("Error during sign in with redirect:", error);
+});
+
 
 // Sign out
 logoutBtn.addEventListener('click', () => {
