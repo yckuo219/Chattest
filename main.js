@@ -38,6 +38,7 @@ auth.onAuthStateChanged(user => {
         logoutBox.style.display = 'block';
         chatInputBox.style.display = 'block';
         userName.textContent = user.displayName;
+        loadMessages();
     } else {
         loginBox.style.display = 'block';
         logoutBox.style.display = 'none';
@@ -51,8 +52,10 @@ document.getElementById('sendBtn').addEventListener('click', () => {
     const message = document.getElementById('messageInput').value;
     if (message) {
         const timestamp = new Date().toLocaleString();
+        const userId = auth.currentUser.uid;
         messagesRef.push({
             user: auth.currentUser.displayName,
+            userId: userId,
             message: message,
             timestamp: timestamp
         });
@@ -67,28 +70,37 @@ messagesRef.on('child_added', (snapshot) => {
     messageElement.classList.add('message');
     messageElement.textContent = `${messageData.user} (${messageData.timestamp}): ${messageData.message}`;
     
-    // Add delete button
-    const deleteButton = document.createElement('button');
-    deleteButton.textContent = 'Delete';
-    deleteButton.addEventListener('click', () => {
-        deleteMessage(snapshot.key);
-    });
-    messageElement.appendChild(deleteButton);
+    // 如果消息发送者是当前用户，添加删除按钮
+    if (messageData.userId === auth.currentUser.uid) {
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.addEventListener('click', () => {
+            deleteMessage(snapshot.key);
+        });
+        messageElement.appendChild(deleteButton);
+    }
     
     document.getElementById('messages').appendChild(messageElement);
 });
 
 // Delete message function
 function deleteMessage(messageId) {
-    messagesRef.child(messageId).remove()
-        .then(() => {
-            console.log('Message deleted successfully');
-            // Reload messages
-            loadMessages();
-        })
-        .catch((error) => {
-            console.error('Error deleting message:', error);
-        });
+    messagesRef.child(messageId).once('value', (snapshot) => {
+        const messageData = snapshot.val();
+        if (messageData.userId === auth.currentUser.uid) {
+            messagesRef.child(messageId).remove()
+                .then(() => {
+                    console.log('Message deleted successfully');
+                    // Reload messages
+                    loadMessages();
+                })
+                .catch((error) => {
+                    console.error('Error deleting message:', error);
+                });
+        } else {
+            console.error('You can only delete your own messages');
+        }
+    });
 }
 
 // Load messages
@@ -101,13 +113,15 @@ function loadMessages() {
             messageElement.classList.add('message');
             messageElement.textContent = `${messageData.user} (${messageData.timestamp}): ${messageData.message}`;
             
-            // Add delete button
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.addEventListener('click', () => {
-                deleteMessage(childSnapshot.key);
-            });
-            messageElement.appendChild(deleteButton);
+            // 如果消息发送者是当前用户，添加删除按钮
+            if (messageData.userId === auth.currentUser.uid) {
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.addEventListener('click', () => {
+                    deleteMessage(childSnapshot.key);
+                });
+                messageElement.appendChild(deleteButton);
+            }
             
             document.getElementById('messages').appendChild(messageElement);
         });
