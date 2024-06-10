@@ -26,7 +26,6 @@ auth.getRedirectResult().then((result) => {
     console.error("Error during sign in with redirect:", error);
 });
 
-
 // Sign out
 logoutBtn.addEventListener('click', () => {
     auth.signOut();
@@ -51,20 +50,69 @@ auth.onAuthStateChanged(user => {
 document.getElementById('sendBtn').addEventListener('click', () => {
     const message = document.getElementById('messageInput').value;
     if (message) {
+        const timestamp = new Date().toLocaleString();
         messagesRef.push({
             user: auth.currentUser.displayName,
             message: message,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: timestamp
         });
         document.getElementById('messageInput').value = '';
     }
 });
 
-// Display messages
+// Display messages with delete button
 messagesRef.on('child_added', (snapshot) => {
     const messageData = snapshot.val();
     const messageElement = document.createElement('div');
     messageElement.classList.add('message');
-    messageElement.textContent = `${messageData.user}: ${messageData.message}`;
+    messageElement.textContent = `${messageData.user} (${messageData.timestamp}): ${messageData.message}`;
+    
+    // Add delete button
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete';
+    deleteButton.addEventListener('click', () => {
+        deleteMessage(snapshot.key);
+    });
+    messageElement.appendChild(deleteButton);
+    
     document.getElementById('messages').appendChild(messageElement);
 });
+
+// Delete message function
+function deleteMessage(messageId) {
+    messagesRef.child(messageId).remove()
+        .then(() => {
+            console.log('Message deleted successfully');
+            // Reload messages
+            loadMessages();
+        })
+        .catch((error) => {
+            console.error('Error deleting message:', error);
+        });
+}
+
+// Load messages
+function loadMessages() {
+    document.getElementById('messages').innerHTML = ''; // Clear messages
+    messagesRef.once('value', (snapshot) => {
+        snapshot.forEach((childSnapshot) => {
+            const messageData = childSnapshot.val();
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.textContent = `${messageData.user} (${messageData.timestamp}): ${messageData.message}`;
+            
+            // Add delete button
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.addEventListener('click', () => {
+                deleteMessage(childSnapshot.key);
+            });
+            messageElement.appendChild(deleteButton);
+            
+            document.getElementById('messages').appendChild(messageElement);
+        });
+    });
+}
+
+// Initial load messages
+loadMessages();
