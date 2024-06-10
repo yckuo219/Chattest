@@ -7,19 +7,11 @@
         body { font-family: Arial, sans-serif; }
         .chat-box { width: 300px; margin: 20px auto; }
         .message { border-bottom: 1px solid #ccc; padding: 5px 0; }
-        .login-box, .logout-box, .chat-input-box { display: none; }
     </style>
 </head>
 <body>
     <div class="chat-box">
         <h1>Chat Application</h1>
-        <div class="login-box">
-            <button id="loginBtn">Login with Google</button>
-        </div>
-        <div class="logout-box">
-            <p>Welcome, <span id="userName"></span>!</p>
-            <button id="logoutBtn">Logout</button>
-        </div>
         <div id="messages"></div>
         <div class="chat-input-box">
             <input type="text" id="messageInput" placeholder="Type a message">
@@ -32,8 +24,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js"></script>
 
-    <!-- Your custom JavaScript files -->
-    <script src="config.js"></script>
+    <!-- Your custom JavaScript file -->
     <script src="main.js"></script>
 </body>
 </html>
