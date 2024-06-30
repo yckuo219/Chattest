@@ -2,12 +2,13 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Chat Application</title>
+    <title>Chat Application with 3D Game</title>
     <style>
-        body { font-family: Arial, sans-serif; }
-        .chat-box { width: 300px; margin: 20px auto; }
+        body { font-family: Arial, sans-serif; margin: 0; overflow: hidden; }
+        .chat-box { width: 300px; margin: 20px; position: absolute; top: 0; left: 0; background: rgba(255, 255, 255, 0.8); padding: 10px; border-radius: 8px; }
         .message { border-bottom: 1px solid #ccc; padding: 5px 0; }
         .login-box, .logout-box, .chat-input-box { display: none; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -31,6 +32,9 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <!-- Your custom JavaScript files -->
     <script src="config.js"></script>
